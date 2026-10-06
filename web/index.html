@@ -33,6 +33,11 @@
       </div>
     </section>
 
+    <section id="changesPanel" class="panel changes-panel hidden" aria-live="polite">
+      <div class="panel-heading"><div><p class="eyebrow">PENDING CHANGES</p><h3>待保存修改</h3></div><span id="changeCount" class="hint"></span></div>
+      <div id="changesList" class="changes-list"></div>
+    </section>
+
     <form id="settingsForm">
       <section class="panel backend-panel">
         <div class="panel-heading"><div><p class="eyebrow">01 / PROVIDER</p><h3>选择对话后端</h3></div><span class="hint">重启后生效</span></div>
@@ -88,7 +93,11 @@
         </div>
       </section>
 
-      <footer class="form-actions"><span id="saveStatus" class="muted"></span><button class="button button-primary" type="submit">保存配置</button></footer>
+      <footer class="form-actions">
+        <span id="saveStatus" class="muted"></span>
+        <button id="saveButton" class="button" type="button">仅保存</button>
+        <button id="saveRestartButton" class="button button-primary" type="submit">保存并重启</button>
+      </footer>
     </form>
   </main>
   <script src="/app.js"></script>
