@@ -67,8 +67,9 @@ async function loadModels(target) {
     const response = await fetch('/api/models', { cache:'no-store' });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || '读取模型失败');
-    const listId = target === 'CODEX_MODEL' ? 'codexModelOptions' : 'officialModelOptions';
-    document.querySelector(`#${listId}`).innerHTML = result.models.map((model) => `<option value="${escapeHtml(model.id)}" label="${escapeHtml(model.name)} · ${escapeHtml(model.source)}"></option>`).join('');
+    const select = document.querySelector(target === 'CODEX_MODEL' ? '#codexModelSelect' : '#officialModelSelect');
+    select.innerHTML = `<option value="">选择一个模型</option>${result.models.map((model) => `<option value="${escapeHtml(model.id)}">${escapeHtml(model.name)} · ${escapeHtml(model.id)} · ${escapeHtml(model.source)}</option>`).join('')}`;
+    select.onchange = () => { if (select.value) { field(target).value = select.value; renderChanges(); } };
     setMessage(`已读取 ${result.models.length} 个模型（${result.backend}）。`, 'success');
   } catch (error) { setMessage(error.message, 'error'); }
   finally { button.disabled = false; button.textContent = '↻ 读取'; }
