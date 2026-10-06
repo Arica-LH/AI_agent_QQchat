@@ -51,6 +51,13 @@
       <div class="appearance-footer"><span id="themeStatus" class="muted">颜色变化会自动保存</span><button id="resetThemeButton" class="button button-quiet" type="button">恢复默认配色</button></div>
     </section>
 
+    <section class="panel stickers-panel">
+      <div class="panel-heading"><div><p class="eyebrow">STICKER LIBRARY</p><h3>QQ 表情收藏</h3></div><button id="refreshStickersButton" class="button button-quiet" type="button">↻ 刷新</button></div>
+      <p id="stickerCapability" class="muted sticker-note">正在检查 NapCat 连接…</p>
+      <div class="sticker-upload"><label>上传到本地 agent 表情库<input id="stickerFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><label>表情名称<input id="stickerName" placeholder="例如：无语"></label><button id="uploadStickerButton" class="button button-primary" type="button">加入 agent 库</button></div>
+      <div id="stickerList" class="sticker-list"><span class="muted">暂无表情。</span></div>
+    </section>
+
     <form id="settingsForm">
       <section class="panel backend-panel">
         <div class="panel-heading"><div><p class="eyebrow">01 / PROVIDER</p><h3>选择对话后端</h3></div><span class="hint">重启后生效</span></div>

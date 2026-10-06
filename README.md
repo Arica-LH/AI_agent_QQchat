@@ -102,6 +102,8 @@ open -a /Applications/QQ.app
 
 回复支持 Unicode emoji、OneBot 标准 QQ 表情和 QQ 收藏表情。后端输出 `[CQ:face,id=14]` 这类代码时，桥接服务会转换成 QQ 表情段发送；如果 dsh 输出 `STICKER_ID: <收藏表情 ID>`，桥接服务会从 NapCat 收藏清单中取出对应表情并单独发送。自定义表情包需要先作为图片文件生成，再通过 `IMAGE_PATH` 发送。
 
+管理页面的“QQ 表情收藏”区域可以读取 NapCat 当前账号的 QQ 收藏表情，也可以从电脑上传图片到本地 agent 表情库，上传内容会立即加入 dsh/Codex 可用的表情清单。OneBot v11 没有通用的“把本地图片加入 QQ 收藏”接口，因此页面会明确区分 QQ 收藏和本地 agent 表情；要真正加入 QQ 收藏，需要在 QQ/NapCat 客户端中完成。
+
 群聊中后端可以在确实需要点名、提醒或直接回应某位成员时输出 `[CQ:at,qq=123456]`，桥接服务会转换成真正的 QQ @。它只会使用消息上下文中已知的 QQ 号。
 
 发送图片时，桥接服务会优先通过 NapCat 的 `get_image` API 读取本地图片，远程图片链接只作备用；因此 NapCat 需要支持 OneBot 图片 API。如果 NapCat 本地没有图片且 Rkey 服务失效，图片仍无法获取，需要修复 NapCat 的图片缓存或 Rkey 配置。

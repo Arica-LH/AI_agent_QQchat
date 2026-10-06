@@ -60,6 +60,27 @@ function markBaseline() {
   renderChanges();
 }
 function isDirty() { return changedValues().length > 0; }
+function renderStickers(data) {
+  const capability = document.querySelector('#stickerCapability');
+  capability.textContent = data.canAddToQq
+    ? '已连接 QQ，可读取并写入收藏表情。'
+    : data.onebotConnected
+      ? `已连接 QQ，可读取收藏；${data.limitation}`
+      : 'NapCat 尚未连接。上传内容会保存到本地 agent 表情库，连接后可读取 QQ 收藏。';
+  const entries = [
+    ...(data.qq || []).map((item) => ({ ...item, source:'QQ 收藏', preview:item.url || item.file })),
+    ...(data.local || []).map((item) => ({ ...item, source:'本地 agent', preview:item.preview })),
+  ];
+  document.querySelector('#stickerList').innerHTML = entries.length
+    ? entries.map((item) => `<article class="sticker-card"><img src="${escapeHtml(item.preview || '')}" alt=""><strong title="${escapeHtml(item.name || '未命名表情')}">${escapeHtml(item.name || '未命名表情')}</strong><small>${escapeHtml(item.source)} · ${escapeHtml(item.id || '')}</small></article>`).join('')
+    : '<span class="muted">暂无可用表情。</span>';
+}
+async function loadStickers() {
+  const response = await fetch('/api/stickers', { cache:'no-store' });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || '读取表情失败');
+  renderStickers(data);
+}
 function applyTheme(theme) {
   const root = document.documentElement;
   Object.entries(theme).forEach(([key, value]) => root.style.setProperty(`--${key}`, value));
@@ -141,4 +162,22 @@ document.querySelector('#restartButton').addEventListener('click', async () => {
   try { await restartService(); } catch (error) { setMessage(error.message, 'error'); }
 });
 initTheme();
+document.querySelector('#refreshStickersButton').addEventListener('click', () => loadStickers().catch((error) => { document.querySelector('#stickerCapability').textContent = error.message; }));
+document.querySelector('#uploadStickerButton').addEventListener('click', async () => {
+  const file = document.querySelector('#stickerFile').files[0];
+  if (!file) { document.querySelector('#stickerCapability').textContent = '请选择一张图片。'; return; }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const response = await fetch('/api/stickers/upload', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ name:document.querySelector('#stickerName').value, data:reader.result }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '上传失败');
+      document.querySelector('#stickerFile').value = ''; document.querySelector('#stickerName').value = '';
+      document.querySelector('#stickerCapability').textContent = '已加入本地 agent 表情库，可供 agent 选择。';
+      await loadStickers();
+    } catch (error) { document.querySelector('#stickerCapability').textContent = error.message; }
+  };
+  reader.readAsDataURL(file);
+});
+loadStickers().catch(() => {});
 loadConfig().catch((error) => { setMessage(error.message, 'error'); statusText.textContent = '读取失败'; runtimeBadge.textContent = '离线'; });

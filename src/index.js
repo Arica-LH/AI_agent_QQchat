@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import os from 'node:os';
@@ -50,6 +50,8 @@ const defaultPersona = process.env.DEFAULT_PERSONA
 const dataDir = path.resolve('data');
 const sessionsFile = path.join(dataDir, 'sessions.json');
 const officialSessionsFile = path.join(dataDir, 'official_sessions.json');
+const localStickersDir = path.join(dataDir, 'stickers');
+const localStickersFile = path.join(dataDir, 'stickers.json');
 const recentPrompts = new Map();
 const pendingMessageBatches = new Map();
 const holidayGreetingsSent = new Map();
@@ -77,6 +79,17 @@ if (chatBackend === 'official' && !deepseekApiKey) {
   throw new Error('Set DEEPSEEK_API_KEY when CHAT_BACKEND=official.');
 }
 await mkdir(dataDir, { recursive: true });
+await mkdir(localStickersDir, { recursive: true });
+let localStickers = [];
+try {
+  localStickers = JSON.parse(await readFile(localStickersFile, 'utf8'));
+  if (!Array.isArray(localStickers)) localStickers = [];
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+async function saveLocalStickers() {
+  await writeFile(localStickersFile, JSON.stringify(localStickers, null, 2), { mode: 0o600 });
+}
 let sessions = {};
 try {
   sessions = JSON.parse(await readFile(sessionsFile, 'utf8'));
@@ -102,6 +115,17 @@ function backendName() {
   if (chatBackend === 'dsh') return 'dsh';
   if (chatBackend === 'official') return 'DeepSeek 官方 API';
   return 'Codex';
+}
+
+let oneBotSocket = null;
+
+function localStickerEntries() {
+  return localStickers.map((sticker) => ({
+    id: sticker.id,
+    name: sticker.name,
+    file: path.resolve(sticker.file),
+    local: true,
+  }));
 }
 
 function officialVersionLabel() {
@@ -177,6 +201,48 @@ function jsonResponse(res, status, body) {
 async function handleHttpRequest(req, res) {
   try {
     const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    if (requestUrl.pathname === '/api/stickers' && req.method === 'GET') {
+      const qqStickers = oneBotSocket ? await getFavoriteStickers(oneBotSocket, true) : [];
+      jsonResponse(res, 200, {
+        onebotConnected: Boolean(oneBotSocket),
+        canReadQq: Boolean(oneBotSocket),
+        canAddToQq: false,
+        limitation: 'OneBot v11/NapCat 没有通用的加入 QQ 收藏表情 API。电脑上传的图片会保存到本地 agent 表情库。',
+        qq: qqStickers,
+        local: localStickers.map((sticker) => ({ ...sticker, preview: `/sticker-files/${path.basename(sticker.file)}` })),
+      });
+      return;
+    }
+    if (requestUrl.pathname === '/api/stickers/upload' && req.method === 'POST') {
+      let body = '';
+      for await (const chunk of req) {
+        body += chunk;
+        if (body.length > 25 * 1024 * 1024) throw new Error('图片请求过大，不能超过 20 MB。');
+      }
+      const payload = JSON.parse(body);
+      const match = String(payload.data || '').match(/^data:(image\/(?:png|jpeg|jpg|gif|webp));base64,([A-Za-z0-9+/=]+)$/i);
+      if (!match) throw new Error('只支持 PNG、JPG、GIF 或 WebP 图片。');
+      const name = String(payload.name || '未命名表情').trim().slice(0, 80) || '未命名表情';
+      const extension = match[1].includes('png') ? 'png' : match[1].includes('gif') ? 'gif' : match[1].includes('webp') ? 'webp' : 'jpg';
+      const id = `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+      const file = path.join(localStickersDir, `${id}.${extension}`);
+      const buffer = Buffer.from(match[2], 'base64');
+      if (buffer.length > 15 * 1024 * 1024) throw new Error('图片过大，单张不能超过 15 MB。');
+      await writeFile(file, buffer, { mode: 0o600 });
+      const entry = { id, name, file: path.relative(process.cwd(), file), createdAt: new Date().toISOString() };
+      localStickers.push(entry);
+      await saveLocalStickers();
+      jsonResponse(res, 200, { ok: true, sticker: entry });
+      return;
+    }
+    if (requestUrl.pathname.startsWith('/sticker-files/') && req.method === 'GET') {
+      const name = requestUrl.pathname.slice('/sticker-files/'.length);
+      if (!/^[A-Za-z0-9_.-]+$/.test(name)) { res.writeHead(404); res.end('Not found'); return; }
+      const file = path.join(localStickersDir, name);
+      const content = await readFile(file);
+      const type = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.gif':'image/gif', '.webp':'image/webp' }[path.extname(file).toLowerCase()] || 'application/octet-stream';
+      res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store' }); res.end(content); return;
+    }
     if (requestUrl.pathname === '/api/config' && req.method === 'GET') {
       jsonResponse(res, 200, { config: publicConfig(), running: { backend: chatBackend, port, wsPath } });
       return;
@@ -1212,7 +1278,7 @@ async function handleMessage(ws, event) {
         : '';
       const prompt = `当前系统时间（上海时区）：${shanghaiDateTimeLabel()}\n\n${text || imageOnlyInstruction}${replyContext}${memberContext}${stickerContext}`;
       const resolvedImages = await resolveImageSources(ws, [...imageSources, ...cqImages]);
-      const stickerEntries = await getFavoriteStickers(ws);
+      const stickerEntries = [...await getFavoriteStickers(ws), ...localStickerEntries()];
       let result;
       try {
         result = await runAgent(prompt, sessions[conversationId], resolvedImages, stickerEntries, conversationId);
@@ -1240,6 +1306,7 @@ async function handleMessage(ws, event) {
 }
 
 wss.on('connection', (ws) => {
+  oneBotSocket = ws;
   console.log('OneBot connected.');
   ws.on('message', (buffer) => {
     let event;
@@ -1258,7 +1325,10 @@ wss.on('connection', (ws) => {
     if (event.post_type === 'message') enqueueMessage(ws, event);
     if (event.post_type === 'notice') handleNotice(ws, event);
   });
-  ws.on('close', () => console.log('OneBot disconnected.'));
+  ws.on('close', () => {
+    if (oneBotSocket === ws) oneBotSocket = null;
+    console.log('OneBot disconnected.');
+  });
 });
 
 httpServer.listen(port, host, () => {
