@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>QQ Agent Bridge 设置</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand-mark">Q</div>
+      <div>
+        <p class="eyebrow">LOCAL CONTROL ROOM</p>
+        <h1>QQ Agent Bridge</h1>
+      </div>
+      <div class="top-actions">
+        <span id="runtimeBadge" class="badge">读取中</span>
+        <button id="restartButton" class="button button-quiet" type="button">↻ 重启服务</button>
+      </div>
+    </header>
+
+    <section class="intro">
+      <div>
+        <p class="eyebrow">连接与模型</p>
+        <h2>把接入设置集中在一个地方</h2>
+        <p class="muted">配置只写入当前机器的 <code>.env</code>。密钥不会回显，也不会进入 Git。</p>
+      </div>
+      <div class="status-card">
+        <span class="status-dot"></span>
+        <div><strong id="statusText">服务状态读取中</strong><small id="statusDetail">WebSocket 与管理页面共用本地端口</small></div>
+      </div>
+    </section>
+
+    <form id="settingsForm">
+      <section class="panel backend-panel">
+        <div class="panel-heading"><div><p class="eyebrow">01 / PROVIDER</p><h3>选择对话后端</h3></div><span class="hint">重启后生效</span></div>
+        <div class="backend-grid">
+          <label class="backend-option"><input type="radio" name="CHAT_BACKEND" value="codex"><span><b>Codex CLI</b><small>本地工具与工作区能力</small></span></label>
+          <label class="backend-option"><input type="radio" name="CHAT_BACKEND" value="dsh"><span><b>dsh</b><small>复用 dsh profile 与会话</small></span></label>
+          <label class="backend-option"><input type="radio" name="CHAT_BACKEND" value="official"><span><b>官方 API</b><small>DeepSeek OpenAI 兼容接口</small></span></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">02 / MODEL</p><h3>模型与凭据</h3></div></div>
+        <div id="codexFields" class="field-grid">
+          <label>Codex 可执行文件<input name="CODEX_BIN" placeholder="codex"></label>
+          <label>Codex 模型<input name="CODEX_MODEL" placeholder="留空使用 CLI 默认模型"></label>
+          <label>推理强度<select name="CODEX_REASONING_EFFORT"><option value="">默认</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option></select></label>
+        </div>
+        <div id="dshFields" class="field-grid hidden">
+          <label>dsh 可执行文件<input name="CHAT_DSH_BIN" placeholder="dsh"></label>
+          <label>dsh Profile<input name="CHAT_DSH_PROFILE" placeholder="headless"></label>
+          <label>dsh Home<input name="CHAT_DSH_HOME" placeholder="例如 /Users/you/.dsh"></label>
+          <label>dsh Patch<input name="CHAT_DSH_PATCH" placeholder="可选的 cordis.patch.yml 路径"></label>
+        </div>
+        <div id="officialFields" class="field-grid hidden">
+          <label>API Key <span class="label-note">留空保持不变</span><input type="password" name="DEEPSEEK_API_KEY" autocomplete="new-password" placeholder="已配置时不会回显"></label>
+          <label>API Base URL<input name="DEEPSEEK_BASE_URL" placeholder="https://api.deepseek.com"></label>
+          <label>模型<input name="DEEPSEEK_MODEL" placeholder="deepseek-chat"></label>
+          <label>推理强度<select name="DEEPSEEK_REASONING_EFFORT"><option value="">默认</option><option>low</option><option>medium</option><option>high</option></select></label>
+          <label>最大输出 tokens<input name="DEEPSEEK_MAX_TOKENS" type="number" min="1" step="1" placeholder="4096"></label>
+        </div>
+        <label class="wide">默认人格提示<textarea name="DEFAULT_PERSONA" rows="3" placeholder="每条 QQ 消息都会附带的角色提示"></textarea></label>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">03 / QQ ACCESS</p><h3>QQ 与白名单</h3></div><span class="hint">至少填写一类白名单</span></div>
+        <div class="field-grid">
+          <label>OneBot Access Token <span class="label-note">留空保持不变</span><input type="password" name="ONEBOT_ACCESS_TOKEN" autocomplete="new-password" placeholder="已配置时不会回显"></label>
+          <label>机器人 QQ 号<input name="BOT_QQ_ID" inputmode="numeric" placeholder="例如 123456789"></label>
+          <label class="wide">允许私聊用户 QQ 号<input name="ALLOWED_USER_IDS" placeholder="多个号码用英文逗号分隔"></label>
+          <label class="wide">允许群号<input name="ALLOWED_GROUP_IDS" placeholder="多个号码用英文逗号分隔"></label>
+        </div>
+      </section>
+
+      <section class="panel compact-panel">
+        <div class="panel-heading"><div><p class="eyebrow">04 / RUNTIME</p><h3>桥接服务</h3></div></div>
+        <div class="field-grid">
+          <label>监听地址<input name="HOST" placeholder="127.0.0.1"></label>
+          <label>端口<input name="PORT" type="number" min="1" max="65535" placeholder="3001"></label>
+          <label>WebSocket 路径<input name="WS_PATH" placeholder="/onebot/v11/ws"></label>
+          <label>项目目录<input name="PROJECT_DIR" placeholder="当前目录"></label>
+          <label>请求超时（毫秒）<input name="CODEX_TIMEOUT_MS" type="number" min="1000" step="1000" placeholder="600000"></label>
+          <label>单条消息上限<input name="MAX_PROMPT_CHARS" type="number" min="100" step="100" placeholder="6000"></label>
+        </div>
+      </section>
+
+      <footer class="form-actions"><span id="saveStatus" class="muted"></span><button class="button button-primary" type="submit">保存配置</button></footer>
+    </form>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

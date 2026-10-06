@@ -54,6 +54,10 @@ CHAT_DSH_PATCH=/absolute/path/to/your/.dsh/profiles/web/cordis.patch.yml
 npm start
 ```
 
+启动后打开 `http://127.0.0.1:3001/`，可以在本地管理页面中切换 Codex CLI、dsh 和官方 API，填写模型、白名单、路径和人格提示。保存后点击“重启服务”使配置生效。页面只绑定在 `HOST` 配置的地址，密钥字段只显示“已配置”状态，不会回显。
+
+管理页面会写入当前项目目录的 `.env`，并保留没有在页面修改的密钥。不要把页面暴露到公网；如果将 `HOST` 改为 `0.0.0.0`，请在反向代理或防火墙层增加认证。
+
 ## 配置 NapCat
 
 在 NapCat 的 WebSocket 客户端/反向 WebSocket 设置中添加：
