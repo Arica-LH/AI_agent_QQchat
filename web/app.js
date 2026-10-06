@@ -17,6 +17,12 @@ const fieldLabels = {
   HOST:'监听地址', PORT:'端口', WS_PATH:'WebSocket 路径', PROJECT_DIR:'项目目录', CODEX_TIMEOUT_MS:'请求超时', MAX_PROMPT_CHARS:'单条消息上限',
 };
 let baseline = {};
+const themeDefaults = {
+  default: { mode:'dark', accent:'#d8f36b', bg:'#101314', glow:'#2d3a35', panel:'#181d1e', panel2:'#202728', field:'#101515', card:'#151a1a', line:'#303939', text:'#e9efed', muted:'#9aa8a4' },
+  ocean: { mode:'dark', accent:'#72d7ff', bg:'#0d151b', glow:'#173c4c', panel:'#14222a', panel2:'#1c303a', field:'#0c171d', card:'#112028', line:'#2a424c', text:'#e8f5f8', muted:'#95aeb5' },
+  plum: { mode:'dark', accent:'#e6a8ff', bg:'#17121b', glow:'#43294f', panel:'#241b2b', panel2:'#34253c', field:'#17121c', card:'#211827', line:'#4a3552', text:'#f7edf9', muted:'#bba9c0' },
+  light: { mode:'light', accent:'#25745f', bg:'#f3f5f1', glow:'#d9e9df', panel:'#ffffff', panel2:'#edf1ed', field:'#f8faf8', card:'#f0f4f1', line:'#cad6ce', text:'#1d2a23', muted:'#65756b' },
+};
 
 function field(name) { return form.elements.namedItem(name); }
 function setBackend(value) {
@@ -54,6 +60,28 @@ function markBaseline() {
   renderChanges();
 }
 function isDirty() { return changedValues().length > 0; }
+function applyTheme(theme) {
+  const root = document.documentElement;
+  Object.entries(theme).forEach(([key, value]) => root.style.setProperty(`--${key}`, value));
+  root.style.colorScheme = theme.mode || 'dark';
+  document.querySelector('#themeMode').value = theme.mode || 'dark';
+  document.querySelector('#accentColor').value = theme.accent;
+  document.querySelector('#backgroundColor').value = theme.bg;
+  document.querySelector('#panelColor').value = theme.panel;
+  document.querySelector('#textColor').value = theme.text;
+}
+function readTheme() {
+  const root = getComputedStyle(document.documentElement);
+  return { mode: document.querySelector('#themeMode').value, accent: root.getPropertyValue('--accent').trim(), bg: root.getPropertyValue('--bg').trim(), glow: root.getPropertyValue('--glow').trim(), panel: root.getPropertyValue('--panel').trim(), panel2: root.getPropertyValue('--panel-2').trim(), field: root.getPropertyValue('--field').trim(), card: root.getPropertyValue('--card').trim(), line: root.getPropertyValue('--line').trim(), text: root.getPropertyValue('--text').trim(), muted: root.getPropertyValue('--muted').trim() };
+}
+function saveTheme() { localStorage.setItem('qq-bridge-theme', JSON.stringify(readTheme())); document.querySelector('#themeStatus').textContent = '已保存到当前浏览器'; }
+function initTheme() {
+  try { const saved = JSON.parse(localStorage.getItem('qq-bridge-theme') || 'null'); if (saved) applyTheme(saved); } catch { localStorage.removeItem('qq-bridge-theme'); }
+  document.querySelector('#themePreset').addEventListener('change', (event) => { if (themeDefaults[event.target.value]) applyTheme(themeDefaults[event.target.value]); else return; saveTheme(); });
+  document.querySelector('#themeMode').addEventListener('change', (event) => { document.documentElement.style.colorScheme = event.target.value; saveTheme(); });
+  [['accentColor','accent'],['backgroundColor','bg'],['panelColor','panel'],['textColor','text']].forEach(([id, variable]) => document.querySelector(`#${id}`).addEventListener('input', (event) => { document.documentElement.style.setProperty(`--${variable}`, event.target.value); document.querySelector('#themePreset').value = 'custom'; saveTheme(); }));
+  document.querySelector('#resetThemeButton').addEventListener('click', () => { applyTheme(themeDefaults.default); document.querySelector('#themePreset').value = 'default'; saveTheme(); });
+}
 
 async function loadConfig() {
   const response = await fetch('/api/config', { cache: 'no-store' });
@@ -112,4 +140,5 @@ document.querySelector('#restartButton').addEventListener('click', async () => {
   setMessage('正在重启…');
   try { await restartService(); } catch (error) { setMessage(error.message, 'error'); }
 });
+initTheme();
 loadConfig().catch((error) => { setMessage(error.message, 'error'); statusText.textContent = '读取失败'; runtimeBadge.textContent = '离线'; });
