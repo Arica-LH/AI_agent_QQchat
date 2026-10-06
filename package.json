@@ -1,0 +1,13 @@
+{
+  "name": "qq-codex-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local OneBot v11 to Codex CLI bridge",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

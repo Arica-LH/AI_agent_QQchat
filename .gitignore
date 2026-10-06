@@ -1,0 +1,32 @@
+# Local environment files; only the sanitized template is public.
+.env
+.env.*
+!.env.example
+*.env
+.envrc
+
+# Dependencies, conversations, downloaded attachments, and logs.
+node_modules/
+data/
+logs/
+*.log
+npm-debug.log*
+.qq-chat-images-*/
+
+# Local credentials and agent configuration.
+.dsh/
+.codex/
+.credentials*
+credentials.*
+secrets/
+*.pem
+*.key
+cordis.patch.yml
+
+# Local editor files and backups.
+.DS_Store
+.idea/
+.vscode/
+*.bak
+*.swp
+*~
