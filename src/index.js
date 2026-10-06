@@ -247,6 +247,11 @@ async function handleHttpRequest(req, res) {
       jsonResponse(res, 200, { config: publicConfig(), running: { backend: chatBackend, port, wsPath } });
       return;
     }
+    if (requestUrl.pathname === '/api/models' && req.method === 'GET') {
+      const models = await getAvailableModels();
+      jsonResponse(res, 200, { backend: chatBackend, models });
+      return;
+    }
     if (requestUrl.pathname === '/api/config' && req.method === 'POST') {
       let body = '';
       for await (const chunk of req) {
@@ -748,6 +753,32 @@ async function getConfiguredDshModels() {
     console.warn(`无法读取 dsh 模型配置：${error.message}`);
     return models;
   }
+}
+
+async function getAvailableModels() {
+  if (chatBackend === 'dsh') {
+    return (await getConfiguredDshModels()).map((model) => ({ id: model.id, name: model.name, source: `dsh/${model.provider}` }));
+  }
+  if (chatBackend === 'official') {
+    if (!deepseekApiKey) throw new Error('请先配置 DEEPSEEK_API_KEY，再读取官方 API 模型。');
+    const response = await fetch(`${deepseekBaseUrl}/models`, {
+      headers: { authorization: `Bearer ${deepseekApiKey}` },
+    });
+    const raw = await response.text();
+    let payload = {};
+    try { payload = raw ? JSON.parse(raw) : {}; } catch { /* show a useful HTTP error below */ }
+    if (!response.ok) throw new Error(payload?.error?.message || `模型接口返回 HTTP ${response.status}`);
+    const models = Array.isArray(payload?.data) ? payload.data : [];
+    return models.map((model) => ({ id: String(model.id || ''), name: String(model.name || model.id || ''), source: '官方 API' }))
+      .filter((model) => model.id);
+  }
+  const configured = codexModel ? [{ id: codexModel, name: codexModel, source: '当前配置' }] : [];
+  const candidates = [
+    { id: 'gpt-5-codex', name: 'GPT-5 Codex', source: 'Codex 常见模型' },
+    { id: 'codex-mini-latest', name: 'Codex Mini Latest', source: 'Codex 常见模型' },
+  ];
+  const seen = new Set();
+  return [...configured, ...candidates].filter((model) => !seen.has(model.id) && seen.add(model.id));
 }
 
 async function getDshDefaultModel() {

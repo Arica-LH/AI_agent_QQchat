@@ -60,6 +60,19 @@ function markBaseline() {
   renderChanges();
 }
 function isDirty() { return changedValues().length > 0; }
+async function loadModels(target) {
+  const button = document.querySelector(`[data-model-target="${target}"]`);
+  button.disabled = true; button.textContent = '读取中';
+  try {
+    const response = await fetch('/api/models', { cache:'no-store' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '读取模型失败');
+    const listId = target === 'CODEX_MODEL' ? 'codexModelOptions' : 'officialModelOptions';
+    document.querySelector(`#${listId}`).innerHTML = result.models.map((model) => `<option value="${escapeHtml(model.id)}" label="${escapeHtml(model.name)} · ${escapeHtml(model.source)}"></option>`).join('');
+    setMessage(`已读取 ${result.models.length} 个模型（${result.backend}）。`, 'success');
+  } catch (error) { setMessage(error.message, 'error'); }
+  finally { button.disabled = false; button.textContent = '↻ 读取'; }
+}
 function renderStickers(data) {
   const capability = document.querySelector('#stickerCapability');
   capability.textContent = data.canAddToQq
@@ -162,6 +175,7 @@ document.querySelector('#restartButton').addEventListener('click', async () => {
   try { await restartService(); } catch (error) { setMessage(error.message, 'error'); }
 });
 initTheme();
+document.querySelectorAll('.model-refresh').forEach((button) => button.addEventListener('click', () => loadModels(button.dataset.modelTarget)));
 document.querySelector('#refreshStickersButton').addEventListener('click', () => loadStickers().catch((error) => { document.querySelector('#stickerCapability').textContent = error.message; }));
 document.querySelector('#uploadStickerButton').addEventListener('click', async () => {
   const file = document.querySelector('#stickerFile').files[0];

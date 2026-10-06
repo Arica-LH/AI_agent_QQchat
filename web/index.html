@@ -72,7 +72,7 @@
         <div class="panel-heading"><div><p class="eyebrow">02 / MODEL</p><h3>模型与凭据</h3></div></div>
         <div id="codexFields" class="field-grid">
           <label>Codex 可执行文件<input name="CODEX_BIN" placeholder="codex"></label>
-          <label>Codex 模型<input name="CODEX_MODEL" placeholder="留空使用 CLI 默认模型"></label>
+          <label>Codex 模型<div class="model-control"><input name="CODEX_MODEL" list="codexModelOptions" placeholder="读取或手动输入"><button class="button button-quiet model-refresh" data-model-target="CODEX_MODEL" type="button">↻ 读取</button></div><datalist id="codexModelOptions"></datalist></label>
           <label>推理强度<select name="CODEX_REASONING_EFFORT"><option value="">默认</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option></select></label>
         </div>
         <div id="dshFields" class="field-grid hidden">
@@ -84,7 +84,7 @@
         <div id="officialFields" class="field-grid hidden">
           <label>API Key <span class="label-note">留空保持不变</span><input type="password" name="DEEPSEEK_API_KEY" autocomplete="new-password" placeholder="已配置时不会回显"></label>
           <label>API Base URL<input name="DEEPSEEK_BASE_URL" placeholder="https://api.deepseek.com"></label>
-          <label>模型<input name="DEEPSEEK_MODEL" placeholder="deepseek-chat"></label>
+          <label>模型<div class="model-control"><input name="DEEPSEEK_MODEL" list="officialModelOptions" placeholder="读取或手动输入"><button class="button button-quiet model-refresh" data-model-target="DEEPSEEK_MODEL" type="button">↻ 读取</button></div><datalist id="officialModelOptions"></datalist></label>
           <label>推理强度<select name="DEEPSEEK_REASONING_EFFORT"><option value="">默认</option><option>low</option><option>medium</option><option>high</option></select></label>
           <label>最大输出 tokens<input name="DEEPSEEK_MAX_TOKENS" type="number" min="1" step="1" placeholder="4096"></label>
         </div>
